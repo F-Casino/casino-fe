@@ -1,6 +1,6 @@
 use bevy::{
     asset::AssetServer,
-    hierarchy::BuildChildren,
+    hierarchy::{BuildChildren, DespawnRecursiveExt},
     prelude::{Commands, Entity, Query, Res, With},
     text::TextStyle,
     ui::{
@@ -18,14 +18,37 @@ pub fn spawn_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
     let main_menu_entity = build_main_menu(&mut commands, &asset_server);
 }
 
-pub fn despawn_main_menu(mut commands: Commands, menu_entity: Query<Entity, With<MainMenu>>) {
+pub fn despawn_main_menu(
+    mut commands: Commands,
+    menu_entity: Query<Entity, With<MainMenu>>,
+    background_menu_entity: Query<Entity, With<Background>>,
+) {
     if let Ok(main_menu_entity) = menu_entity.get_single() {
-        commands.entity(main_menu_entity).despawn();
+        commands.entity(main_menu_entity).despawn_recursive();
+    }
+
+    if let Ok(background_menu_entity) = background_menu_entity.get_single() {
+        commands.entity(background_menu_entity).despawn_recursive();
     }
 }
 
-fn build_main_menu(commands: &mut Commands, asset_server: &Res<AssetServer>) -> Entity {
-    commands
+fn build_main_menu(commands: &mut Commands, asset_server: &Res<AssetServer>) -> (Entity, Entity) {
+    let background_entity = commands
+        .spawn((
+            ImageBundle {
+                style: Style {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    ..Default::default()
+                },
+                image: UiImage::new(asset_server.load("")),
+                ..Default::default()
+            },
+            Background {},
+        ))
+        .id();
+
+    let menu_entity = commands
         .spawn((
             NodeBundle {
                 style: Style {
@@ -96,5 +119,7 @@ fn build_main_menu(commands: &mut Commands, asset_server: &Res<AssetServer>) -> 
                     ));
                 });
         })
-        .id()
+        .id();
+
+    (background_entity, menu_entity)
 }
